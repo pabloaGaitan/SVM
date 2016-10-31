@@ -5,16 +5,24 @@
  */
 package clases;
 
+import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  *
  * @author HP
  */
-public class Servidor {
+public class Servidor implements Serializable{
     
     private String ip;
-    private List<Archivo> archivos;
+    private List<Proyecto> proyectos;
+    private List<Archivo> replicas;
+    
+    public Servidor(){
+        replicas = new ArrayList<>();
+        proyectos = new ArrayList<>();
+    }
 
     public String getIp() {
         return ip;
@@ -24,13 +32,19 @@ public class Servidor {
         this.ip = ip;
     }
 
-    public List<Archivo> getArchivos() {
-        return archivos;
+    public List<Proyecto> getProyectos() {
+        return proyectos;
     }
 
-    public void setArchivos(List<Archivo> archivos) {
-        this.archivos = archivos;
+    public void setProyectos(List<Proyecto> proyectos) {
+        this.proyectos = proyectos;
     }
-    
-    
+
+    public List<Archivo> getReplicas() {
+        return replicas;
+    }
+
+    public void setReplicas(List<Archivo> replicas) {
+        this.replicas = replicas;
+    }
 }

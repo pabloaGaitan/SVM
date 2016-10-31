@@ -5,17 +5,20 @@
  */
 package clases;
 
+import java.io.File;
+import java.io.Serializable;
 import java.sql.Timestamp;
 
 /**
  *
  * @author HP
  */
-public class Archivo {
+public class Archivo implements Serializable{
     
     private String nombre;
     private Timestamp timeStamp;
     private String locacion;
+    private byte[] file;
 
     public String getNombre() {
         return nombre;
@@ -39,5 +42,13 @@ public class Archivo {
 
     public void setLocacion(String locacion) {
         this.locacion = locacion;
+    }
+
+    public byte[] getFile() {
+        return file;
+    }
+
+    public void setFile(byte[] file) {
+        this.file = file;
     }
 }

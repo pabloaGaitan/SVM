@@ -13,10 +13,10 @@ import java.util.List;
 
 /**
  *
- * @author HP
+ * @author ASUS
  */
-public interface IManejador extends Remote{
+public interface IReplicacion extends Remote{
     
-    public List<Servidor> registrar(Servidor servidor) throws RemoteException;
-    public void actualizar(Servidor servidor) throws RemoteException;
+    public void replicar(Archivo file) throws RemoteException;
+    
 }
