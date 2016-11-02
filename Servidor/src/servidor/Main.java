@@ -32,10 +32,15 @@ import java.util.Scanner;
  */
 public class Main {
     
+<<<<<<< HEAD
     private static List<Proyecto> proyectos = new ArrayList<>();
     private static IReplicacion replicacion;
     private static Servidor server;
     private static Registry rServers;
+=======
+    private static List<Proyecto> proyectos;
+    private static S
+>>>>>>> master
     
     public static void init() throws Exception{
         server = new Servidor();
