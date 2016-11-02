@@ -15,6 +15,7 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.List;
+import persistencia.Persistencia;
 
 /**
  *
@@ -24,12 +25,14 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
     
     private Servidor thisServer;
     private IManejador manejador;
+    private String host;
     
-    public Replicacion(Servidor server) throws RemoteException,MalformedURLException, NotBoundException{
+    public Replicacion(Servidor server , String host) throws RemoteException,MalformedURLException, NotBoundException{
         super();
         this.thisServer = server;
-        Registry remote = LocateRegistry.getRegistry("host-ip",1099);
-        manejador = (IManejador)remote.lookup("rmi://host-ip/Manejador");
+        this.host = host;
+        Registry remote = LocateRegistry.getRegistry(host,1099);
+        manejador = (IManejador)remote.lookup("rmi://" + host +"/Manejador");
     }
     
     public void registro() throws Exception{
@@ -64,7 +67,7 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
     public void replicar(Archivo file) throws Exception{
         int menor = 1000;
         Servidor s = null;
-        for (Servidor server : servidores) {
+        for (Servidor server : manejador.getServidores()) {
             if(server.getReplicas().size() < menor && !thisServer.getIp().equals(server.getIp())){
                 menor = server.getReplicas().size();
                 s = server;
@@ -85,7 +88,7 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
 
     public List<Servidor> getServidores() throws RemoteException{
         //manejador.getServidores();
-        return servidores;
+        return manejador.getServidores();
     }
     
     public Servidor getThisServer() throws RemoteException{

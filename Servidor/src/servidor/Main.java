@@ -25,28 +25,24 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Scanner;
+import persistencia.Persistencia;
 
 /**
  *
  * @author HP
  */
 public class Main {
-    
-<<<<<<< HEAD
+
     private static List<Proyecto> proyectos = new ArrayList<>();
     private static IReplicacion replicacion;
     private static Servidor server;
     private static Registry rServers;
-=======
-    private static List<Proyecto> proyectos;
-    private static S
->>>>>>> master
     
     public static void init() throws Exception{
         server = new Servidor();
         server.setIp(InetAddress.getLocalHost().getHostAddress());
-        replicacion.registro(server);
-        replicacion = new Replicacion(server);
+        replicacion = new Replicacion(server,Persistencia.leerHost("host.txt"));
+        replicacion.registro();
         rServers = LocateRegistry.createRegistry(1099);
         rServers.rebind("rmi://"+InetAddress.getLocalHost().getHostAddress()+"/Replicacion", replicacion);
     }

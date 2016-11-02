@@ -5,10 +5,7 @@
  */
 package clases;
 
-<<<<<<< HEAD
 import java.io.File;
-=======
->>>>>>> master
 import java.io.Serializable;
 import java.sql.Timestamp;
 
@@ -16,11 +13,7 @@ import java.sql.Timestamp;
  *
  * @author HP
  */
-<<<<<<< HEAD
-public class Archivo implements Serializable{
-=======
 public class Archivo implements Serializable {
->>>>>>> master
     
     private String nombre;
     private Timestamp timeStamp;

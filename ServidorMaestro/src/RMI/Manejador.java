@@ -40,6 +40,7 @@ public class Manejador extends UnicastRemoteObject implements IManejador {
     
     public List<Servidor> registrar(Servidor servidor) throws RemoteException{
         servidores.add(servidor);
+        System.out.println(servidor.getIp());
         return servidores;
     }
     
@@ -50,5 +51,9 @@ public class Manejador extends UnicastRemoteObject implements IManejador {
                 break;
             }
         }
+    }
+    
+    public List<Servidor> getServidores()throws RemoteException{
+        return this.servidores;
     }
 }

@@ -19,5 +19,5 @@ public interface IManejador extends Remote{
     
     public List<Servidor> registrar(Servidor servidor) throws RemoteException;
     public void actualizar(Servidor servidor) throws RemoteException;
-    
+    public List<Servidor> getServidores() throws RemoteException;
 }
