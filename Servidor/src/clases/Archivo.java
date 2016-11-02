@@ -5,13 +5,14 @@
  */
 package clases;
 
+import java.io.Serializable;
 import java.sql.Timestamp;
 
 /**
  *
  * @author HP
  */
-public class Archivo {
+public class Archivo implements Serializable {
     
     private String nombre;
     private Timestamp timeStamp;

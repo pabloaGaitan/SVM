@@ -23,6 +23,7 @@ import java.util.Scanner;
 public class Main {
     
     private static List<Proyecto> proyectos;
+    private static S
     
     public static int menu(){
         int opc = 0;

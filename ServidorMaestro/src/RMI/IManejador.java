@@ -5,9 +5,11 @@
  */
 package RMI;
 
+import clases.Archivo;
 import clases.Servidor;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.util.List;
 
 /**
  *
@@ -15,7 +17,7 @@ import java.rmi.RemoteException;
  */
 public interface IManejador extends Remote{
     
-    public void registrar(Servidor servidor) throws RemoteException;
+    public List<Servidor> registrar(Servidor servidor) throws RemoteException;
     public void actualizar(Servidor servidor) throws RemoteException;
     
 }
