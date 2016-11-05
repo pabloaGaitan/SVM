@@ -11,6 +11,7 @@ import clases.Servidor;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -18,12 +19,13 @@ import java.util.List;
  */
 public interface IReplicacion extends Remote{
     
-    public void registro(Servidor server) throws Exception;
+    public void registro() throws Exception;
     public boolean asociarArchivo(Archivo file, String proyectoName) throws Exception;
     public void actualizar(List<Servidor> servidores) throws RemoteException;
     public void agregarArchivo(Archivo archivo) throws RemoteException;
     public void agregarProyecto(Proyecto proyecto) throws RemoteException;
-    public List<Servidor> getServidores() throws RemoteException;
-    public void setServidores(List<Servidor> servidores);
-    public Servidor getThisServer() throws RemoteException;
+    public Map<Integer,Servidor> getServidores() throws RemoteException;
+    public boolean checkout(String nombrePro,String nombreArch) throws Exception;
+    public boolean twoPhaseCommit() throws Exception;
+    public boolean commit(String archivo) throws Exception;
 }

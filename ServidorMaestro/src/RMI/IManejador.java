@@ -6,10 +6,12 @@
 package RMI;
 
 import clases.Archivo;
+import clases.Proyecto;
 import clases.Servidor;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.util.List;
+import java.util.Map;
 
 /**
  *
@@ -17,7 +19,14 @@ import java.util.List;
  */
 public interface IManejador extends Remote{
     
-    public List<Servidor> registrar(Servidor servidor) throws RemoteException;
-    public void actualizar(Servidor servidor) throws RemoteException;
-    public List<Servidor> getServidores() throws RemoteException;
+    public List<Integer> registrar(Servidor servidor) throws RemoteException;
+    //public void actualizar(Servidor servidor,int id) throws RemoteException;
+    public Map<Integer,Servidor> getServidores() throws RemoteException;
+    //public void registro() throws Exception;
+    public boolean asociarArchivo(Archivo file, String proyectoName,int id) throws Exception;
+    public void actualizar(Map<Integer,Servidor> servidores) throws RemoteException;
+    public void agregarArchivo(Archivo archivo,int id) throws RemoteException;
+    public void agregarProyecto(Proyecto proyecto,int id) throws RemoteException;
+   // public List<Servidor> getServidores() throws RemoteException;
+    public Archivo checkout(String nombrePro, String nombreArch,int id) throws RemoteException;
 }

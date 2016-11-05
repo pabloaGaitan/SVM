@@ -7,6 +7,7 @@ package clases;
 
 import java.io.File;
 import java.io.Serializable;
+import java.rmi.Remote;
 import java.sql.Timestamp;
 
 /**
@@ -19,6 +20,15 @@ public class Archivo implements Serializable{
     private Timestamp timeStamp;
     private String locacion;
     private byte[] file;
+    private boolean despliegue = false;
+    
+    public boolean isDespliegue(){
+        return despliegue;
+    }
+    
+    public void setDespliegue(boolean despliegue){
+        this.despliegue = despliegue;
+    }
     
     public String getNombre() {
         return nombre;

@@ -37,6 +37,7 @@ public class Main {
     private static IReplicacion replicacion;
     private static Servidor server;
     private static Registry rServers;
+    private static int id;
     
     public static void init() throws Exception{
         server = new Servidor();

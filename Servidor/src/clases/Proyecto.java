@@ -5,6 +5,8 @@
  */
 package clases;
 
+import java.io.Serializable;
+import java.rmi.Remote;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,7 +14,7 @@ import java.util.List;
  *
  * @author HP
  */
-public class Proyecto {
+public class Proyecto implements Serializable{
     
     private String fechaCreacion;
     private String propietario;

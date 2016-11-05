@@ -21,7 +21,9 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import persistencia.Persistencia;
 
 /**
@@ -37,7 +39,7 @@ public class ClienteSVM {
         int opc = 0;
         System.out.println("1. Crear Proyecto");
         System.out.println("2. Asociar archivo a proyecto");
-        System.out.println("3. Consultar Proyecto");
+        System.out.println("3. Consultar Proyectos");
         System.out.println("4. Checkout");
         System.out.println("5. Commit");
         System.out.println("6. Salir");
@@ -53,7 +55,7 @@ public class ClienteSVM {
         replicacion = (IReplicacion)remote.lookup("rmi://" + host +"/Replicacion");
     }
     
-    public void listaServidores() throws Exception{
+    /*public static void listaServidores() throws Exception{
         System.out.println("Servidores disponibles para almacenar su proyecto");
         List<Servidor> list = new ArrayList<>();
         int serv = 0;
@@ -65,15 +67,18 @@ public class ClienteSVM {
         Scanner sc = new Scanner(System.in);
         serv = sc.nextInt();
         Registry remote = LocateRegistry.getRegistry(list.get(serv).getIp(),1099);
+        System.out.println(list.get(serv).getIp());
         replicacion = (IReplicacion)remote.lookup("rmi://"+list.get(serv).getIp()+"/Replicacion");
-    }
+    }*/
+    
     /**
      * @param args the command line arguments
      */
     public static void main(String[] args) {
         try{
+            init();
             // escribir la ip del servidor.
-            
+            //listaServidores();
             int opc = -1;
             Proyecto p;
             Archivo file = new Archivo();
@@ -110,6 +115,40 @@ public class ClienteSVM {
                             IManejador manejador = (IManejador)R.lookup("rmi://192.168.43.42/Manejador");
                             manejador.prueba(file);*/
                         break;
+                    case 3:
+                        Map<Integer, Servidor> servidores = replicacion.getServidores();
+                        System.out.println("Servidor \t Proyectos \t Replicas");
+                        int i = 0;
+                        Set<Integer> set = servidores.keySet();
+                        for (Integer s : set) {
+                            System.out.print("S"+(i++) + "\t");
+                            for(Proyecto pr : servidores.get(s).getProyectos()){
+                                System.out.print(pr.getNombre() + "(");
+                                for(Archivo a : pr.getArchivos()){
+                                    System.out.print(a.getNombre()+",");
+                                }
+                                System.out.println(")");
+                            }
+                            for(String a : getReplicas(servidores.get(s))){
+                                System.out.print(a+",");
+                            }
+                            System.out.println("");
+                        }
+                        System.out.println("");
+                        break;
+                    case 4:
+                        System.out.print("Nombre del proyecto: ");
+                        String namePro = sc.next();
+                        System.out.print("Nombre del archivo: ");
+                        String nameArch = sc.next();
+                        if(replicacion.checkout(namePro,nameArch))
+                            System.out.println("Se desplegó el archivo");
+                        else
+                            System.out.println("No se pudo desplegar el archivo");
+                        break;
+                    case 5:
+                        System.out.println("Nombre del archivo: ");
+                        
                     default:
                         break;
                 }
@@ -118,5 +157,14 @@ public class ClienteSVM {
         }catch(Exception e){
             e.printStackTrace();
         }
+    }
+    
+    public static List<String> getReplicas(Servidor s){
+        List<String> list = new ArrayList<>();
+        for(Archivo a : s.getReplicas()){
+            if(!list.contains(a.getNombre()))
+                list.add(a.getNombre());
+        }
+        return list;
     }
 }
