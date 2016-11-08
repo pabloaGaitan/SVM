@@ -9,6 +9,7 @@ import clases.Archivo;
 import clases.Proyecto;
 import clases.Servidor;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.net.MalformedURLException;
@@ -17,6 +18,10 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -50,8 +55,15 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
     }
     
     // solo se llama desde el master
-    public void actualizar(List<Servidor> servidores) throws RemoteException{
-        
+    public void actualizar(Map<Integer,Servidor> servidores,Archivo archivo) throws Exception{
+        Set<Integer> set = servidores.keySet();
+        for (Integer i : set) {
+            for(int in = 0;in<servidores.get(i).getReplicas().size();in++){
+                if(servidores.get(i).getReplicas().get(in).equals(archivo.getNombre())){
+                   manejador.agregarArchivo(archivo,i);
+                }
+            }
+        }
     }
     
     // Replicas a un servidor
@@ -66,26 +78,8 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
     public boolean asociarArchivo(Archivo file, String proyectoName) throws Exception{
         return manejador.asociarArchivo(file, proyectoName, id);
     }
-    
-    // falta mirar el k del sistema
-    public void replicar(Archivo file) throws Exception{
-        int menor = 1000;
-        Servidor s = null;
-        Map<Integer,Servidor> m = manejador.getServidores();
-        Set<Integer> servidores = m.keySet();
-        for (Integer server : servidores) {
-            if(m.get(server).getReplicas().size() < menor && !thisServer.getIp().equals(m.get(server).getIp())){
-                menor = m.get(server).getReplicas().size();
-                s = m.get(server);
-            }
-        }
-        Registry r = LocateRegistry.getRegistry(s.getIp(),1099);
-        IReplicacion replicacion = (IReplicacion)r.lookup("rmi://"+s.getIp()+"/Replicacion");
-        replicacion.agregarArchivo(file);
-    }
 
     public Map<Integer,Servidor> getServidores() throws RemoteException{
-        //manejador.getServidores();
         return manejador.getServidores();
     }
     
@@ -100,6 +94,7 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
             aux[i] = (char)arch.getFile()[i];
         }
         wr.write(aux);
+        wr.close();
         return true;
     }
     
@@ -118,8 +113,28 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
         return true;
     }
     
-    public boolean commit(String archivo) throws Exception{
+    public void recibirAviso(String text){
+        System.out.println(text);
+    }
+    
+    public void avisoTodos(Archivo a) throws Exception{
         Map<Integer,Servidor> servidores = manejador.getServidores();
+        Set<Integer> set = servidores.keySet();
+        for (Integer i : set) {
+            for(int ii = 0;ii<servidores.get(i).getReplicas().size();ii++){
+                if(servidores.get(i).getReplicas().get(ii).getNombre().equals(a.getNombre())){
+                    Registry r = LocateRegistry.getRegistry(servidores.get(i).getIp(),1099);
+                    IReplicacion rep = (IReplicacion)r.lookup("rmi://"+servidores.get(i).getIp()+"/Replicacion");
+                    rep.recibirAviso("El archivo "+a.getNombre()+" se ha actualizado.");
+                }
+            }
+        }
+    }
+    
+    public boolean commit(String archivo,byte buf[]) throws Exception{
+        Map<Integer,Servidor> servidores = manejador.getServidores();
+        List<Integer> noContestaron = new ArrayList<>();
+        Archivo archi = new Archivo();
         int cont = 0;
         Set<Integer> set = servidores.keySet();
         for (Integer s : set) {
@@ -128,12 +143,59 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
                 IReplicacion rep = (IReplicacion)r.lookup("rmi://"+servidores.get(s).getIp()+"/Replicacion");
                 if(rep.twoPhaseCommit())
                     cont++;
+                else
+                    noContestaron.add(s);
+                
             }
         }
-        if(cont == servidores.size()){
-            // hacer commit
+        if(cont == servidores.size()-1){
+            Servidor s = manejador.getServidores().get(id);
+            for(Archivo arch : s.getReplicas()){
+                if(arch.isDespliegue())
+                    archi = arch;
+            }
+            for(Proyecto p : s.getProyectos()){
+                for (Archivo a : p.getArchivos()) {
+                    if(a.isDespliegue())
+                        archi = a;
+                }
+            }
+            Archivo newArchivo = new Archivo();
+            newArchivo.setDespliegue(false);
+            newArchivo.setFile(buf);
+            newArchivo.setNombre(archi.getNombre());
+            newArchivo.setTimeStamp((new Timestamp(((Date)Calendar.getInstance().getTime()).getTime())));
+            avisoTodos(newArchivo);
             return true;
         }
+        for (Integer inte : noContestaron) {
+            Registry r = LocateRegistry.getRegistry(servidores.get(inte).getIp(),1099);
+            IReplicacion rep = (IReplicacion)r.lookup("rmi://"+servidores.get(inte).getIp()+"/Replicacion");
+            if(rep.invalidar(archivo)){
+                Archivo a = buscarArchivo(archivo);
+                manejador.invalidar(a.getTimeStamp(), archivo, id);
+                rep.recibirAviso("El archivo " + archivo + " se ha invalidado.");
+            }
+        }
+        
         return false;
+    }
+    
+    public Archivo buscarArchivo(String nombre) throws Exception{
+        Map<Integer,Servidor> servidores = manejador.getServidores();
+        for (Archivo a : servidores.get(id).getReplicas()) {
+            if(a.getNombre().equalsIgnoreCase(nombre) && a.isDespliegue())
+                return a;
+        }
+        for(Proyecto p: servidores.get(id).getProyectos() )
+            for(Archivo a : p.getArchivos())
+                if(a.getNombre().equalsIgnoreCase(nombre) && a.isDespliegue())
+                    return a;
+        return null;
+    }
+    
+    public boolean invalidar(String archivo)throws Exception{
+        File fichero = new File(archivo);
+        return fichero.delete();
     }
 }

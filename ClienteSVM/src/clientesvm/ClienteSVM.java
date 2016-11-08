@@ -55,22 +55,6 @@ public class ClienteSVM {
         replicacion = (IReplicacion)remote.lookup("rmi://" + host +"/Replicacion");
     }
     
-    /*public static void listaServidores() throws Exception{
-        System.out.println("Servidores disponibles para almacenar su proyecto");
-        List<Servidor> list = new ArrayList<>();
-        int serv = 0;
-        list = replicacion.getServidores();
-        for (int i = 0; i < list.size();i++) {
-            System.out.println("S"+i);
-        }
-        System.out.print("Digite el numero del servidor: ");
-        Scanner sc = new Scanner(System.in);
-        serv = sc.nextInt();
-        Registry remote = LocateRegistry.getRegistry(list.get(serv).getIp(),1099);
-        System.out.println(list.get(serv).getIp());
-        replicacion = (IReplicacion)remote.lookup("rmi://"+list.get(serv).getIp()+"/Replicacion");
-    }*/
-    
     /**
      * @param args the command line arguments
      */
@@ -84,6 +68,7 @@ public class ClienteSVM {
             Archivo file = new Archivo();
             Scanner sc = new Scanner(System.in);
             String nombreProyecto;
+            String continuar;
             opc = menu();
             while(opc != 6){
                 switch (opc){
@@ -104,11 +89,9 @@ public class ClienteSVM {
                         File fi = new File(file.getNombre());
                         BufferedInputStream bf = new BufferedInputStream(new FileInputStream(file.getNombre()));
                         byte buffer[] = new byte[(int)fi.length()];
-                        bf.read(buffer,0,buffer.length);
+                        bf.read(buffer,0, (int) fi.length());
                         bf.close();
                         file.setFile(buffer);
-                        System.out.print("Locacion: ");
-                        file.setLocacion(sc.next());
                         replicacion.asociarArchivo(file, nombreProyecto);
                             // asociar archivo al proyecto
                             /*Registry R = LocateRegistry.getRegistry("192.168.43.42",1099);
@@ -144,11 +127,25 @@ public class ClienteSVM {
                         if(replicacion.checkout(namePro,nameArch))
                             System.out.println("Se desplegó el archivo");
                         else
-                            System.out.println("No se pudo desplegar el archivo");
+                            System.out.println("No se pudo desplegar el archivo, quizas este archivo no esta en este servidor");
                         break;
                     case 5:
-                        System.out.println("Nombre del archivo: ");
-                        
+                        System.out.print("Nombre del archivo: ");
+                        String arch = sc.next();
+                        File fil = new File(file.getNombre());
+                        BufferedInputStream bfi = new BufferedInputStream(new FileInputStream(file.getNombre()));
+                        byte bufferr[] = new byte[(int)fil.length()];
+                        continuar = "s";
+                        while(continuar.equalsIgnoreCase("s")){
+                            if(replicacion.commit(arch, bufferr))
+                                System.out.println("se hizo commit");
+                            else
+                                System.out.println("No se pudo hacer");
+                            System.out.print("Intentar de nuevo? S/N: ");
+                            continuar = sc.next();
+                        }
+                        bfi.close();
+                        break;
                     default:
                         break;
                 }

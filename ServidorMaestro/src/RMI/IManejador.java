@@ -10,6 +10,7 @@ import clases.Proyecto;
 import clases.Servidor;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
@@ -29,4 +30,5 @@ public interface IManejador extends Remote{
     public void agregarProyecto(Proyecto proyecto,int id) throws RemoteException;
    // public List<Servidor> getServidores() throws RemoteException;
     public Archivo checkout(String nombrePro, String nombreArch,int id) throws RemoteException;
+    public void invalidar(Timestamp t,String arch,int id)throws Exception;
 }

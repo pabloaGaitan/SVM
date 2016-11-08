@@ -21,11 +21,14 @@ public interface IReplicacion extends Remote{
     
     public void registro() throws Exception;
     public boolean asociarArchivo(Archivo file, String proyectoName) throws Exception;
-    public void actualizar(List<Servidor> servidores) throws RemoteException;
+    public void actualizar(Map<Integer,Servidor> servidores,Archivo archivo) throws Exception;
     public void agregarArchivo(Archivo archivo) throws RemoteException;
     public void agregarProyecto(Proyecto proyecto) throws RemoteException;
     public Map<Integer,Servidor> getServidores() throws RemoteException;
     public boolean checkout(String nombrePro,String nombreArch) throws Exception;
     public boolean twoPhaseCommit() throws Exception;
-    public boolean commit(String archivo) throws Exception;
+    public boolean commit(String archivo,byte bufferr[]) throws Exception;
+    public void recibirAviso(String text) throws Exception;
+    public void avisoTodos(Archivo a) throws Exception;
+    public boolean invalidar(String archivo)throws Exception;
 }

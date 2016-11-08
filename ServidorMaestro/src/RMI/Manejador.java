@@ -21,6 +21,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -55,15 +56,6 @@ public class Manejador extends UnicastRemoteObject implements IManejador {
         System.out.println(servidor.getIp());
         return l;
     }
-    
-    /*public void actualizar(Servidor servidor, int id) throws RemoteException{
-        for (Servidor s : servidores) {
-            if(s.equals(servidor.getIp())){
-                s.setReplicas(servidor.getReplicas());
-                break;
-            }
-        }
-    }*/
     
     public Map<Integer,Servidor> getServidores()throws RemoteException{
         return this.servidores;
@@ -106,49 +98,67 @@ public class Manejador extends UnicastRemoteObject implements IManejador {
     
     public void replicar(int id,Archivo archivo) throws Exception{
         int menor = 1000;
-        Servidor s = null;
+        int s=-1;
         Set<Integer> set = servidores.keySet();
         for (int i = 0 ; i< k;i++) {
+            menor = 1000;
             for (Integer in : set) {
                 if(servidores.get(in).getReplicas().size()<menor && !servidores.get(id).getIp().equalsIgnoreCase(servidores.get(in).getIp())){
                     menor = servidores.get(in).getReplicas().size();
-                    s = servidores.get(in);
+                    s = in;
                 }
             }
+            agregarArchivo(archivo,s);
         }
-        agregarArchivo(archivo,buscarID(s.getIp()));
-    }
-    
-    public int buscarID(String ip){
-        int ret = 0;
-        Set<Integer> set = servidores.keySet();
-        for (Integer i:set) {
-            if(servidores.get(i).getIp().equals(ip)){
-                return ret;
-            }
-            ret++;
-        }
-        return -1;
+       
     }
     
     public Archivo checkout(String nombrePro, String nombreArch,int id){
+        List<Archivo> la = new ArrayList<>();
         for (Archivo a : servidores.get(id).getReplicas()) {
             if(a.getNombre().equalsIgnoreCase(nombreArch)){
                 a.setDespliegue(true);
-                return a;
+                la.add(a);
             }
         }
-        for (Proyecto p : servidores.get(id).getProyectos()) {
-            if(p.getNombre().equalsIgnoreCase(nombrePro)){
-                for(Archivo ar : p.getArchivos()){
-                    if(ar.getNombre().equalsIgnoreCase(nombreArch)){
-                        ar.setDespliegue(true);
-                        return ar;
+        if(la.isEmpty()){
+            for (Proyecto p : servidores.get(id).getProyectos()) {
+                if(p.getNombre().equalsIgnoreCase(nombrePro)){
+                    for(Archivo ar : p.getArchivos()){
+                        if(ar.getNombre().equalsIgnoreCase(nombreArch)){
+                            ar.setDespliegue(true);
+                            return ar;
+                        }
                     }
                 }
             }
+        }else{
+            Archivo x = la.get(0);
+            for (int i = 1; i < la.size();i++) {
+                if(x.getTimeStamp().before(la.get(i).getTimeStamp())){
+                    x = la.get(i);
+                }
+            }
+            return x;
         }
         return null;
     }
-    
+    public void invalidar(Timestamp t,String arch,int id)throws Exception{
+        boolean enc = false;
+        for (Proyecto p : servidores.get(id).getProyectos()) {
+            for(Archivo ar : p.getArchivos()){
+                if(ar.getNombre().equalsIgnoreCase(arch)){
+                     ar.setDespliegue(false);
+                     enc = true;
+                }
+            }
+        }
+        if(!enc){
+            for (Archivo arc : servidores.get(id).getReplicas()) {
+               if(arc.getNombre().equalsIgnoreCase(arch) && arc.getTimeStamp().equals(t)){
+                    arc.setDespliegue(false);
+                } 
+            }
+        }
+    }
 }
