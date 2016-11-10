@@ -139,10 +139,11 @@ public class ClienteSVM {
                         while(continuar.equalsIgnoreCase("s")){
                             if(replicacion.commit(arch, bufferr))
                                 System.out.println("se hizo commit");
-                            else
+                            else{
                                 System.out.println("No se pudo hacer");
-                            System.out.print("Intentar de nuevo? S/N: ");
-                            continuar = sc.next();
+								System.out.print("Intentar de nuevo? S/N: ");
+								continuar = sc.next();
+							}
                         }
                         bfi.close();
                         break;
