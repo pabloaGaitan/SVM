@@ -125,6 +125,8 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
                 if(servidores.get(i).getReplicas().get(ii).getNombre().equals(a.getNombre())){
                     Registry r = LocateRegistry.getRegistry(servidores.get(i).getIp(),1099);
                     IReplicacion rep = (IReplicacion)r.lookup("rmi://"+servidores.get(i).getIp()+"/Replicacion");
+                    rep.agregarArchivo(a); // guarda el nuevo archivo en replicas
+                    //falta asociar este archivo al proyecto perteneciente
                     rep.recibirAviso("El archivo "+a.getNombre()+" se ha actualizado.");
                 }
             }
