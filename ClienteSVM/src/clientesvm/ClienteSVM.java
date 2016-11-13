@@ -137,13 +137,14 @@ public class ClienteSVM {
                         byte bufferr[] = new byte[(int)fil.length()];
                         continuar = "s";
                         while(continuar.equalsIgnoreCase("s")){
-                            if(replicacion.commit(arch, bufferr))
+                            if(replicacion.commit(arch, bufferr)){
                                 System.out.println("se hizo commit");
-                            else{
+				continuar = "n";
+			    }else{
                                 System.out.println("No se pudo hacer");
-								System.out.print("Intentar de nuevo? S/N: ");
-								continuar = sc.next();
-							}
+				System.out.print("Intentar de nuevo? S/N: ");
+				continuar = sc.next();
+				}
                         }
                         bfi.close();
                         break;
