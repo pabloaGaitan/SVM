@@ -31,5 +31,5 @@ public interface IReplicacion extends Remote{
     public void recibirAviso(String text) throws Exception;
     public void avisoTodos(Archivo a,String proy) throws Exception;
     public boolean invalidar(String archivo)throws Exception;
-    public boolean ping()throws Exception;
+    public boolean ping() throws Exception;
 }

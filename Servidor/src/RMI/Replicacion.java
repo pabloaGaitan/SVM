@@ -25,6 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.swing.JOptionPane;
 import persistencia.Persistencia;
 
 /**
@@ -75,8 +76,8 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
         manejador.agregarProyecto(proyecto, id);
     }
     
-    public boolean asociarArchivo(Archivo file, String proyectoName) throws Exception{
-        return manejador.asociarArchivo(file, proyectoName, id);
+    public boolean asociarArchivo(Archivo file, String proyectoName,int op) throws Exception{
+        return manejador.asociarArchivo(file, proyectoName, id,op);
     }
 
     public Map<Integer,Servidor> getServidores() throws RemoteException{
@@ -98,15 +99,15 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
         return true;
     }
     
-    public boolean twoPhaseCommit() throws Exception{
+    public boolean twoPhaseCommit(String nombre) throws Exception{
         Servidor s = manejador.getServidores().get(id);
         for(Archivo arch : s.getReplicas()){
-            if(arch.isDespliegue())
+            if(arch.isDespliegue() && arch.getNombre().equals(nombre))
                 return false;
         }
         for(Proyecto p : s.getProyectos()){
             for (Archivo a : p.getArchivos()) {
-                if(a.isDespliegue())
+                if(a.isDespliegue() && a.getNombre().equals(nombre))
                     return false;
             }
         }
@@ -117,33 +118,32 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
         System.out.println(text);
     }
     
-    public void avisoTodos(Archivo a) throws Exception{
+    public void avisoTodos(Archivo a,String proy) throws Exception{
         Map<Integer,Servidor> servidores = manejador.getServidores();
         Set<Integer> set = servidores.keySet();
         for (Integer i : set) {
+            Registry r = LocateRegistry.getRegistry(servidores.get(i).getIp(),1099);
+            IReplicacion rep = (IReplicacion)r.lookup("rmi://"+servidores.get(i).getIp()+"/Replicacion");
             for(int ii = 0;ii<servidores.get(i).getReplicas().size();ii++){
                 if(servidores.get(i).getReplicas().get(ii).getNombre().equals(a.getNombre())){
-                    Registry r = LocateRegistry.getRegistry(servidores.get(i).getIp(),1099);
-                    IReplicacion rep = (IReplicacion)r.lookup("rmi://"+servidores.get(i).getIp()+"/Replicacion");
                     rep.agregarArchivo(a); // guarda el nuevo archivo en replicas
-                    //falta asociar este archivo al proyecto perteneciente
                     rep.recibirAviso("El archivo "+a.getNombre()+" se ha actualizado.");
                 }
+                rep.asociarArchivo(a, proy,2);
             }
         }
     }
     
-    public boolean commit(String archivo,byte buf[]) throws Exception{
+    public boolean commit(String archivo,byte buf[],String proy) throws Exception{
         Map<Integer,Servidor> servidores = manejador.getServidores();
         List<Integer> noContestaron = new ArrayList<>();
-        Archivo archi = new Archivo();
         int cont = 0;
         Set<Integer> set = servidores.keySet();
         for (Integer s : set) {
             if(!servidores.get(s).getIp().equals(servidores.get(id).getIp())){
                 Registry r = LocateRegistry.getRegistry(servidores.get(s).getIp(),1099);
                 IReplicacion rep = (IReplicacion)r.lookup("rmi://"+servidores.get(s).getIp()+"/Replicacion");
-                if(rep.twoPhaseCommit())
+                if(rep.twoPhaseCommit(archivo))
                     cont++;
                 else
                     noContestaron.add(s);
@@ -151,23 +151,12 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
             }
         }
         if(cont == servidores.size()-1){
-            Servidor s = manejador.getServidores().get(id);
-            for(Archivo arch : s.getReplicas()){
-                if(arch.isDespliegue())
-                    archi = arch;
-            }
-            for(Proyecto p : s.getProyectos()){
-                for (Archivo a : p.getArchivos()) {
-                    if(a.isDespliegue())
-                        archi = a;
-                }
-            }
             Archivo newArchivo = new Archivo();
             newArchivo.setDespliegue(false);
             newArchivo.setFile(buf);
-            newArchivo.setNombre(archi.getNombre());
+            newArchivo.setNombre(archivo);
             newArchivo.setTimeStamp((new Timestamp(((Date)Calendar.getInstance().getTime()).getTime())));
-            avisoTodos(newArchivo);
+            avisoTodos(newArchivo,proy);
             return true;
         }
         for (Integer inte : noContestaron) {
@@ -175,8 +164,10 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
             IReplicacion rep = (IReplicacion)r.lookup("rmi://"+servidores.get(inte).getIp()+"/Replicacion");
             if(rep.invalidar(archivo)){
                 Archivo a = buscarArchivo(archivo);
-                manejador.invalidar(a.getTimeStamp(), archivo, id);
-                rep.recibirAviso("El archivo " + archivo + " se ha invalidado.");
+                if(a != null){
+                    manejador.invalidar(a.getTimeStamp(), archivo, id);
+                    rep.recibirAviso("El archivo " + archivo + " se ha invalidado.");
+                }
             }
         }
         
@@ -199,5 +190,9 @@ public class Replicacion extends UnicastRemoteObject implements IReplicacion{
     public boolean invalidar(String archivo)throws Exception{
         File fichero = new File(archivo);
         return fichero.delete();
+    }
+    
+    public boolean ping()throws Exception{
+        return true;
     }
 }

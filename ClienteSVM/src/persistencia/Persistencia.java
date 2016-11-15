@@ -16,6 +16,13 @@ import java.io.InputStreamReader;
  */
 public class Persistencia {
     
+    /**
+     * Lee el archivo "host", este contiene la información del servidor al cual
+     * se va a conectar para poder crear proyectos y archivos.
+     * @param arch
+     * @return
+     * @throws IOException 
+     */
     public static String leerHost(String arch) throws IOException{
         String host = new String();
         FileInputStream in = new FileInputStream(arch);

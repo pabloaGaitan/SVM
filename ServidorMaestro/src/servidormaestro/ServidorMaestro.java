@@ -39,6 +39,8 @@ public class ServidorMaestro {
             Registry R = LocateRegistry.createRegistry(1099);
             manejador = new Manejador(k);
             R.rebind("rmi://"+InetAddress.getLocalHost().getHostAddress() +"/Manejador", manejador);
+            ControlThread t = new ControlThread();
+            t.start();
         } catch (Exception ex) {
             ex.printStackTrace();
         }

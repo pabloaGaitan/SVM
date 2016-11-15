@@ -31,7 +31,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- *
+ * Se encarga de la comunicación entre el servidor y el servidor maestro.
  * @author HP
  */
 public class Manejador extends UnicastRemoteObject implements IManejador {
@@ -40,6 +40,12 @@ public class Manejador extends UnicastRemoteObject implements IManejador {
     private Map<Integer,Servidor> servidores;
     private int k;
     
+    /**
+     * Constructor con la inicialización de los atributos
+     * @param k
+     * @throws RemoteException
+     * @throws MalformedURLException 
+     */
     public Manejador(int k) throws RemoteException, MalformedURLException{
         super();
         contador = 0;
@@ -61,15 +67,9 @@ public class Manejador extends UnicastRemoteObject implements IManejador {
         return this.servidores;
     }
     
-    // solo se llama desde el master
-    public void actualizar(Map<Integer,Servidor> servidores) throws RemoteException{
-        
-    }
-    
     // Replicas a un servidor
     public void agregarArchivo(Archivo archivo ,int id) throws RemoteException{
         servidores.get(id).getReplicas().add(archivo);
-        System.out.println("Se agrego archivo");
     }
     
     public void agregarProyecto(Proyecto proyecto,int id) throws RemoteException{
@@ -78,11 +78,13 @@ public class Manejador extends UnicastRemoteObject implements IManejador {
         
     }
     
-    public boolean asociarArchivo(Archivo file, String proyectoName, int id) throws Exception{
+    public boolean asociarArchivo(Archivo file, String proyectoName, int id,int op) throws Exception{
         Proyecto p = buscarProyecto(proyectoName,id);
-        if(proyectoName != null){
+        if(p != null){
+            System.out.println(" --- " + op + " " + id);
             p.getArchivos().add(file);
-            replicar(id,file);
+            if(op == 1)
+                replicar(id,file);
             return true;
         }
         return false;
@@ -96,53 +98,99 @@ public class Manejador extends UnicastRemoteObject implements IManejador {
         return null;
     }
     
+    /**
+     * Replica el archivo a los demás servidores de forma balanceada.
+     * @param id
+     * @param archivo
+     * @throws Exception 
+     */
     public void replicar(int id,Archivo archivo) throws Exception{
         int menor = 1000;
         int s=-1;
         Set<Integer> set = servidores.keySet();
-        for (int i = 0 ; i< k;i++) {
-            menor = 1000;
-            for (Integer in : set) {
-                if(servidores.get(in).getReplicas().size()<menor && !servidores.get(id).getIp().equalsIgnoreCase(servidores.get(in).getIp())){
-                    menor = servidores.get(in).getReplicas().size();
-                    s = in;
-                }
-            }
-            agregarArchivo(archivo,s);
+        List<Integer> servs = kMenores(id);
+        for (Integer serv : servs) {
+            agregarArchivo(archivo,serv);
         }
        
     }
     
+    /**
+     * Según el k, retorna los servidores cuya carga es menor para poder replicar
+     * @param id
+     * @return 
+     */
+    public List<Integer> kMenores(int id){
+        List<Integer> ret = new ArrayList<>();
+        int menor = 1000000;
+        Set<Integer> set = servidores.keySet();
+        for(int i = 0; i < k; i++){
+            for (Integer in : set) {
+                if(!servidores.get(id).getIp().equalsIgnoreCase(servidores.get(in).getIp()) 
+                        && servidores.get(in).getReplicas().size() <= menor && !ret.contains(in)){
+                    ret.add(in);
+                }
+            }
+        }
+        return ret;
+    }
+    
     public Archivo checkout(String nombrePro, String nombreArch,int id){
         List<Archivo> la = new ArrayList<>();
+        boolean pr = false;
         for (Archivo a : servidores.get(id).getReplicas()) {
             if(a.getNombre().equalsIgnoreCase(nombreArch)){
-                a.setDespliegue(true);
+                //a.setDespliegue(true);
                 la.add(a);
             }
         }
         if(la.isEmpty()){
+            pr = true;
             for (Proyecto p : servidores.get(id).getProyectos()) {
                 if(p.getNombre().equalsIgnoreCase(nombrePro)){
                     for(Archivo ar : p.getArchivos()){
                         if(ar.getNombre().equalsIgnoreCase(nombreArch)){
-                            ar.setDespliegue(true);
-                            return ar;
+                            //ar.setDespliegue(true);
+                            la.add(ar);
                         }
                     }
                 }
             }
-        }else{
-            Archivo x = la.get(0);
-            for (int i = 1; i < la.size();i++) {
-                if(x.getTimeStamp().before(la.get(i).getTimeStamp())){
-                    x = la.get(i);
+        }
+        Archivo x = la.get(0);
+        for (int i = 1; i < la.size();i++) {
+            if(x.getTimeStamp().before(la.get(i).getTimeStamp())){
+                x = la.get(i);
+            }
+        }
+        setDespliegue(x,pr,id);
+        return x;
+    }
+    
+    /**
+     * cambia el atributo despliegue al archivo especificado
+     * @param x
+     * @param pr
+     * @param id 
+     */
+    public void setDespliegue(Archivo x,boolean pr, int id){
+        if(pr){
+            for (Proyecto p : servidores.get(id).getProyectos()) {
+                for(Archivo ar : p.getArchivos()){
+                    if(ar.getTimeStamp().equals(x.getTimeStamp())){
+                        ar.setDespliegue(true);
+                    }
                 }
             }
-            return x;
+        }else{
+            for (Archivo a : servidores.get(id).getReplicas()) {
+                if(a.getTimeStamp().equals(x.getTimeStamp())){
+                    a.setDespliegue(true);
+                }
+            }
         }
-        return null;
     }
+    
     public void invalidar(Timestamp t,String arch,int id)throws Exception{
         boolean enc = false;
         for (Proyecto p : servidores.get(id).getProyectos()) {
@@ -153,12 +201,41 @@ public class Manejador extends UnicastRemoteObject implements IManejador {
                 }
             }
         }
-        if(!enc){
-            for (Archivo arc : servidores.get(id).getReplicas()) {
-               if(arc.getNombre().equalsIgnoreCase(arch) && arc.getTimeStamp().equals(t)){
-                    arc.setDespliegue(false);
-                } 
+        for (Archivo arc : servidores.get(id).getReplicas()) {
+           if(arc.getNombre().equalsIgnoreCase(arch) && arc.getTimeStamp().equals(t)){
+                arc.setDespliegue(false);
+            } 
+        }
+    }
+    
+    /**
+     * Después de que un servidor se ha caido, revisa que servidor puede
+     * tomar los proyectos del servidor caido.
+     * @param p
+     * @param id 
+     */
+    public void distribuirProyectos(List<Proyecto> p, int id){
+        Set<Integer> s = servidores.keySet();
+        int menor = 10000,idS=-1;
+        for (Proyecto pro : p) {
+            menor = 10000;
+            for (Integer integer : s) {
+                if(servidores.get(integer).getProyectos().size() <= menor && 
+                        integer != id){
+                    menor = servidores.get(integer).getProyectos().size();
+                    idS = integer;
+                }
             }
+            if(idS != -1)
+                servidores.get(idS).getProyectos().add(pro);
+        }
+    }
+    
+    public void delete(int id) throws Exception{
+        if(servidores.containsKey(id)){
+            List<Proyecto> p = servidores.get(id).getProyectos();
+            distribuirProyectos(p,id);
+            servidores.remove(id);
         }
     }
 }

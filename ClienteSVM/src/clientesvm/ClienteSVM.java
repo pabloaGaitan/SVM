@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
+import javax.swing.JOptionPane;
 import persistencia.Persistencia;
 
 /**
@@ -35,6 +36,11 @@ public class ClienteSVM {
     private static IReplicacion replicacion;
     private static String host;
     
+    /**
+     * Muestra el menu de opciones al usuario y además, retorna la opción
+     * digitada por él.
+     * @return 
+     */
     public static int menu(){
         int opc = 0;
         System.out.println("1. Crear Proyecto");
@@ -49,6 +55,10 @@ public class ClienteSVM {
         return opc;
     }
     
+    /**
+     * Inicializa la conexión RMI con el servidor.
+     * @throws Exception 
+     */
     public static void init() throws Exception{
         host = Persistencia.leerHost("host.txt");
         Registry remote = LocateRegistry.getRegistry(host,1099);
@@ -61,8 +71,6 @@ public class ClienteSVM {
     public static void main(String[] args) {
         try{
             init();
-            // escribir la ip del servidor.
-            //listaServidores();
             int opc = -1;
             Proyecto p;
             Archivo file = new Archivo();
@@ -86,38 +94,36 @@ public class ClienteSVM {
                         System.out.print("Escriba el nombre del archivo: ");
                         file.setTimeStamp((new Timestamp(((Date)Calendar.getInstance().getTime()).getTime())));
                         file.setNombre(sc.next());
-                        File fi = new File(file.getNombre());
-                        BufferedInputStream bf = new BufferedInputStream(new FileInputStream(file.getNombre()));
-                        byte buffer[] = new byte[(int)fi.length()];
-                        bf.read(buffer,0, (int) fi.length());
-                        bf.close();
-                        file.setFile(buffer);
-                        replicacion.asociarArchivo(file, nombreProyecto);
-                            // asociar archivo al proyecto
-                            /*Registry R = LocateRegistry.getRegistry("192.168.43.42",1099);
-                            IManejador manejador = (IManejador)R.lookup("rmi://192.168.43.42/Manejador");
-                            manejador.prueba(file);*/
+                        try{
+                            File fi = new File(file.getNombre());
+                            BufferedInputStream bf = new BufferedInputStream(new FileInputStream(file.getNombre()));
+                            byte buffer[] = new byte[(int)fi.length()];
+                            bf.read(buffer,0, (int) fi.length());
+                            bf.close();
+                            file.setFile(buffer);
+                            replicacion.asociarArchivo(file, nombreProyecto,1);
+                        }catch(Exception e){
+                            System.out.println("Problemas con el archivo.");
+                        }
                         break;
                     case 3:
                         Map<Integer, Servidor> servidores = replicacion.getServidores();
-                        System.out.println("Servidor \t Proyectos \t Replicas");
                         int i = 0;
                         Set<Integer> set = servidores.keySet();
                         for (Integer s : set) {
-                            System.out.print("S"+(i++) + "\t");
+                            System.out.println("S"+(i++));
+                            System.out.println("Proyectos: ");
                             for(Proyecto pr : servidores.get(s).getProyectos()){
-                                System.out.print(pr.getNombre() + "(");
+                                System.out.println(" "+pr.getNombre() + ": ");
                                 for(Archivo a : pr.getArchivos()){
-                                    System.out.print(a.getNombre()+",");
+                                    System.out.println("  "+a.getNombre());
                                 }
-                                System.out.println(")");
                             }
+                            System.out.println("Replicas: ");
                             for(String a : getReplicas(servidores.get(s))){
-                                System.out.print(a+",");
+                                System.out.println(" "+a);
                             }
-                            System.out.println("");
                         }
-                        System.out.println("");
                         break;
                     case 4:
                         System.out.print("Nombre del proyecto: ");
@@ -130,23 +136,30 @@ public class ClienteSVM {
                             System.out.println("No se pudo desplegar el archivo, quizas este archivo no esta en este servidor");
                         break;
                     case 5:
+                        System.out.print("Nombre del proyecto: ");
+                        String nameProo = sc.next();
                         System.out.print("Nombre del archivo: ");
                         String arch = sc.next();
-                        File fil = new File(file.getNombre());
-                        BufferedInputStream bfi = new BufferedInputStream(new FileInputStream(file.getNombre()));
-                        byte bufferr[] = new byte[(int)fil.length()];
-                        continuar = "s";
-                        while(continuar.equalsIgnoreCase("s")){
-                            if(replicacion.commit(arch, bufferr)){
-                                System.out.println("se hizo commit");
-				continuar = "n";
-			    }else{
-                                System.out.println("No se pudo hacer");
-				System.out.print("Intentar de nuevo? S/N: ");
-				continuar = sc.next();
-				}
+                        try{
+                            File fil = new File(arch);
+                            BufferedInputStream bfi = new BufferedInputStream(new FileInputStream(arch));
+                            byte bufferr[] = new byte[(int)fil.length()];
+                            continuar = "s";
+                            bfi.read(bufferr,0, (int) fil.length());
+                            while(continuar.equalsIgnoreCase("s")){
+                                if(replicacion.commit(arch, bufferr,nameProo)){
+                                    System.out.println("se hizo commit");
+                                    continuar = "n";
+                                }else{
+                                    System.out.println("No se pudo hacer");
+                                    System.out.print("Intentar de nuevo? S/N: ");
+                                    continuar = sc.next();
+                                }
+                            }
+                            bfi.close();
+                        }catch(Exception e){
+                            System.out.println("Problemas con el archivo.");
                         }
-                        bfi.close();
                         break;
                     default:
                         break;
@@ -158,6 +171,11 @@ public class ClienteSVM {
         }
     }
     
+    /**
+     * Obtiene las réplicas de un servidor dado.
+     * @param s
+     * @return 
+     */
     public static List<String> getReplicas(Servidor s){
         List<String> list = new ArrayList<>();
         for(Archivo a : s.getReplicas()){
